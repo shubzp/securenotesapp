@@ -27,8 +27,12 @@ func CreateNote(content string) INotes {
 	}
 }
 
-func (note *Notes) Save() error {
-	return nil
+func (note *Notes) GetId() string {
+	return note.Id
+}
+
+func (note *Notes) GetNote() Notes {
+	return *note
 }
 
 func (note *Notes) Read() (string, error) {

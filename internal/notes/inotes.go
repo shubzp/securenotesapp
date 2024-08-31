@@ -1,7 +1,8 @@
 package notes
 
 type INotes interface {
-	Save() error
+	GetId() string
+	GetNote() Notes
 	Read() (string, error)
 	Edit(content string) error
 	Delete() error

@@ -14,6 +14,7 @@ type JSONResponseWriter struct {
 type IJSONResponseWriter interface {
 	AddKeyValue(key string, value interface{})
 	WriteResponse() error
+	WriteResponseHeader(statusCode int)
 }
 
 func MakeResponseBody(w http.ResponseWriter) IJSONResponseWriter {
@@ -36,4 +37,8 @@ func (jsonResponseWriter *JSONResponseWriter) WriteResponse() error {
 
 	jsonResponseWriter.ResponseWriter.Write(respBody)
 	return nil
+}
+
+func (jsonResponseWriter *JSONResponseWriter) WriteResponseHeader(statusCode int) {
+	jsonResponseWriter.ResponseWriter.WriteHeader(statusCode)
 }

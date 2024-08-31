@@ -7,23 +7,24 @@ import (
 	"net/http"
 	"strings"
 
+	"securenotesapp.com/internal/database"
 	"securenotesapp.com/internal/notes"
 	"securenotesapp.com/internal/utililty"
 )
 
 type Service struct {
+	database database.IDatabase
 }
 
 func MakeService() *Service {
-	return &Service{}
+	return &Service{
+		database: database.InitializeDatabase(),
+	}
 }
 
 func (service *Service) CreateServer() {
 	service.RequestHandler()
-	// http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-	// 	service.HealthCheck()
-	// })
-	fmt.Println("Creating server")
+	log.Println("Creating server")
 	http.ListenAndServe(":8082", nil)
 }
 
@@ -32,18 +33,23 @@ func (service *Service) RequestHandler() {
 		service.HealthCheck()
 	})
 
-	http.HandleFunc("/v1/notes/add", noteHandler)
-	http.HandleFunc("/v1/notes/get", noteHandler)
+	http.HandleFunc("/v1/notes/add", service.noteHandler)
+	http.HandleFunc("/v1/notes/get", service.noteHandler)
 }
 
-func noteHandler(w http.ResponseWriter, r *http.Request) {
+func (service *Service) noteHandler(w http.ResponseWriter, r *http.Request) {
 	path := strings.Split(r.URL.Path, "/")
-
+	responseBody := utililty.MakeResponseBody(w)
 	switch path[1] {
 	case "v1":
 		switch path[3] {
 		case "add":
-			fmt.Println("Adding notes")
+			if r.Method != http.MethodPost {
+				responseBody.AddKeyValue("message", "Invalid method")
+				responseBody.WriteResponseHeader(http.StatusBadRequest)
+				break
+			}
+			log.Println("Adding notes")
 			type ReqBody struct {
 				Content string
 			}
@@ -53,18 +59,32 @@ func noteHandler(w http.ResponseWriter, r *http.Request) {
 				log.Println("error parsing request body", err)
 			}
 			note := notes.CreateNote(body.Content)
-			content, _ := note.Read()
-			fmt.Println(content)
-			responseBody := utililty.MakeResponseBody(w)
-			responseBody.AddKeyValue("status", http.StatusOK)
-			responseBody.AddKeyValue("message", "Notes added")
-			responseBody.WriteResponse()
+			err = service.database.SaveNote(note.GetNote())
+			if err != nil {
+				log.Printf("error while saving note to database : %v", err)
+			}
+			responseBody.AddKeyValue("message", fmt.Sprintf("Note added with %s", note.GetId()))
+			responseBody.WriteResponseHeader(http.StatusOK)
 		case "get":
-			fmt.Println("Getting notes")
+			log.Println("Getting notes")
+			if r.Method != http.MethodGet {
+				responseBody.AddKeyValue("message", "Invalid method")
+				responseBody.WriteResponseHeader(http.StatusBadRequest)
+				break
+			}
+			noteId := r.URL.Query().Get("noteId")
+			note, err := service.database.GetNote(noteId)
+			if err != nil {
+				log.Println("note")
+			}
+			responseBody.AddKeyValue("message", "Note fetched")
+			responseBody.AddKeyValue("noteContent", note.Content)
+			responseBody.WriteResponseHeader(http.StatusOK)
 		default:
 			fmt.Println("Path not defined")
 		}
 	}
+	responseBody.WriteResponse()
 }
 
 func (svc *Service) HealthCheck() {
