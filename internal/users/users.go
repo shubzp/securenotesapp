@@ -1,22 +1,32 @@
 package users
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/hashicorp/go-uuid"
+)
 
 type User struct {
-	Name    string
-	PhoneNo string
+	UserId   string
+	Name     string
+	PhoneNo  string
+	UserName string
+	Password string
 }
 
-func MakeNewUser() IUser {
-	return &User{}
+func MakeNewUser(name, phoneno, username, password string) IUser {
+	uuid, _ := uuid.GenerateUUID()
+	user := &User{}
+	user.UserId = uuid
+	user.Name = name
+	user.PhoneNo = phoneno
+	user.UserName = username
+	user.Password = password
+	return user
 }
 
-func (user *User) Login(username, password string) bool {
-	return true
-}
-
-func (user *User) Register(name, phoneno, username, password string) bool {
-	return true
+func (user *User) GetUser() User {
+	return *user
 }
 
 func (user User) ShowUser() {

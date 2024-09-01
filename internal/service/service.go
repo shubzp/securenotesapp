@@ -9,6 +9,7 @@ import (
 
 	"securenotesapp.com/internal/database"
 	"securenotesapp.com/internal/notes"
+	"securenotesapp.com/internal/users"
 	"securenotesapp.com/internal/utililty"
 )
 
@@ -33,8 +34,11 @@ func (service *Service) RequestHandler() {
 		service.HealthCheck()
 	})
 
-	http.HandleFunc("/v1/notes/add", service.noteHandler)
-	http.HandleFunc("/v1/notes/get", service.noteHandler)
+	http.HandleFunc("/v1/note/add", service.noteHandler)
+	http.HandleFunc("/v1/note/get", service.noteHandler)
+	http.HandleFunc("/v1/user/register", service.userHandler)
+	http.HandleFunc("/v1/user/login", service.userHandler)
+	http.HandleFunc("/v1/user/update", service.userHandler)
 }
 
 func (service *Service) noteHandler(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +50,7 @@ func (service *Service) noteHandler(w http.ResponseWriter, r *http.Request) {
 		case "add":
 			if r.Method != http.MethodPost {
 				responseBody.AddKeyValue("message", "Invalid method")
-				responseBody.WriteResponseHeader(http.StatusBadRequest)
+				responseBody.WriteResponseHeader(http.StatusMethodNotAllowed)
 				break
 			}
 			log.Println("Adding notes")
@@ -69,7 +73,7 @@ func (service *Service) noteHandler(w http.ResponseWriter, r *http.Request) {
 			log.Println("Getting notes")
 			if r.Method != http.MethodGet {
 				responseBody.AddKeyValue("message", "Invalid method")
-				responseBody.WriteResponseHeader(http.StatusBadRequest)
+				responseBody.WriteResponseHeader(http.StatusMethodNotAllowed)
 				break
 			}
 			noteId := r.URL.Query().Get("noteId")
@@ -80,6 +84,72 @@ func (service *Service) noteHandler(w http.ResponseWriter, r *http.Request) {
 			responseBody.AddKeyValue("message", "Note fetched")
 			responseBody.AddKeyValue("noteContent", note.Content)
 			responseBody.WriteResponseHeader(http.StatusOK)
+		default:
+			fmt.Println("Path not defined")
+		}
+	}
+	responseBody.WriteResponse()
+}
+
+func (service *Service) userHandler(w http.ResponseWriter, r *http.Request) {
+	path := strings.Split(r.URL.Path, "/")
+	responseBody := utililty.MakeResponseBody(w)
+	switch path[1] {
+	case "v1":
+		switch path[3] {
+		case "register":
+			if r.Method != http.MethodPost {
+				responseBody.AddKeyValue("message", "Invalid method")
+				responseBody.WriteResponseHeader(http.StatusMethodNotAllowed)
+				break
+			}
+			type UserReqBody struct {
+				Name     string
+				PhoneNo  string
+				UserName string
+				Password string
+			}
+			var userDetails UserReqBody
+			err := json.NewDecoder(r.Body).Decode(&userDetails)
+			if err != nil {
+				log.Println("error decoding request body")
+				responseBody.AddKeyValue("message", "some problem with request body")
+				responseBody.WriteResponseHeader(http.StatusMethodNotAllowed)
+				break
+			}
+			user := users.MakeNewUser(userDetails.Name, userDetails.PhoneNo, userDetails.UserName, userDetails.Password)
+			service.database.AddUser(user.GetUser())
+			responseBody.AddKeyValue("message", "user added successfully")
+			responseBody.WriteResponseHeader(http.StatusOK)
+		case "login":
+			if r.Method != http.MethodGet {
+				responseBody.AddKeyValue("message", "Invalid method")
+				responseBody.WriteResponseHeader(http.StatusMethodNotAllowed)
+				break
+			}
+			username := r.URL.Query().Get("username")
+			password := r.URL.Query().Get("password")
+			areCredsOK, err := service.database.VerifyUserCredentials(username, password)
+			if err != nil {
+				log.Printf("error verifying user credentials : %v", err)
+				responseBody.AddKeyValue("message", "error verifying user credential")
+				responseBody.WriteResponseHeader(http.StatusOK)
+				break
+			}
+			if !areCredsOK {
+				responseBody.AddKeyValue("message", "wrong credentials")
+				responseBody.WriteResponseHeader(http.StatusOK)
+				break
+			}
+			responseBody.AddKeyValue("token", "some token")
+			responseBody.AddKeyValue("message", "login successful")
+			responseBody.WriteResponseHeader(http.StatusOK)
+		case "update":
+			if r.Method != http.MethodPost {
+				responseBody.AddKeyValue("message", "Invalid method")
+				responseBody.WriteResponseHeader(http.StatusMethodNotAllowed)
+				break
+			}
 		default:
 			fmt.Println("Path not defined")
 		}

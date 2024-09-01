@@ -4,7 +4,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 )
 
-type Notes struct {
+type Note struct {
 	Id       string
 	Metadata NoteMetadata
 	Content  string
@@ -18,36 +18,36 @@ type NoteMetadata struct {
 	Genre          string
 }
 
-func CreateNote(content string) INotes {
+func CreateNote(content string) INote {
 	id, _ := uuid.GenerateUUID()
-	return &Notes{
+	return &Note{
 		Id:       id,
 		Content:  content,
 		Metadata: NoteMetadata{},
 	}
 }
 
-func (note *Notes) GetId() string {
+func (note *Note) GetId() string {
 	return note.Id
 }
 
-func (note *Notes) GetNote() Notes {
+func (note *Note) GetNote() Note {
 	return *note
 }
 
-func (note *Notes) Read() (string, error) {
+func (note *Note) Read() (string, error) {
 	return note.Content, nil
 }
 
-func (note *Notes) Edit(updatedContent string) error {
+func (note *Note) Edit(updatedContent string) error {
 	return nil
 }
 
-func (note *Notes) Delete() error {
+func (note *Note) Delete() error {
 	return nil
 }
 
-func (note *Notes) UpdateMetadata(metadata NoteMetadata) error {
+func (note *Note) UpdateMetadata(metadata NoteMetadata) error {
 	note.Metadata = metadata
 	return nil
 }

@@ -1,8 +1,8 @@
 package notes
 
-type INotes interface {
+type INote interface {
 	GetId() string
-	GetNote() Notes
+	GetNote() Note
 	Read() (string, error)
 	Edit(content string) error
 	Delete() error
